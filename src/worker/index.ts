@@ -5,22 +5,21 @@ import {
   PAYMENT_GATEWAY_QUEUE_NAME,
   type PaymentJobPayload,
 } from '../lib/queue';
+import { processPaymentJob } from './payment-processor';
 
-async function processPaymentJob(job: Job<PaymentJobPayload>): Promise<void> {
-  logger.info('payment_job_received_bootstrap', {
-    jobId: job.id,
-    ticketId: job.data.ticketId,
-    cardLast4: job.data.cardLast4,
-  });
+async function handlePaymentJob(job: Job<PaymentJobPayload>): Promise<void> {
+  await processPaymentJob(job.data);
 }
 
 /**
- * Bootstraps the Catraca BullMQ worker process for the `payment-gateway` queue.
+ * Bootstraps the Catraca BullMQ worker process for the `payment-gateway` queue
+ * with concurrency 20 so slow (`0003`/`0004`) and fast (`0001`/`0002`) cards
+ * process concurrently without head-of-line blocking.
  */
 export function startWorker(): Worker<PaymentJobPayload> {
   const worker = new Worker<PaymentJobPayload>(
     PAYMENT_GATEWAY_QUEUE_NAME,
-    processPaymentJob,
+    handlePaymentJob,
     {
       connection: getBullMqConnectionOptions(),
       concurrency: 20,
@@ -28,13 +27,17 @@ export function startWorker(): Worker<PaymentJobPayload> {
   );
 
   worker.on('ready', () => {
-    logger.info('worker_started', { queue: PAYMENT_GATEWAY_QUEUE_NAME });
+    logger.info('worker_started', {
+      queue: PAYMENT_GATEWAY_QUEUE_NAME,
+      concurrency: 20,
+    });
   });
 
   worker.on('failed', (job, error) => {
     logger.error('worker_job_failed', {
       queue: PAYMENT_GATEWAY_QUEUE_NAME,
       jobId: job?.id,
+      ticketId: job?.data?.ticketId,
       error,
     });
   });
