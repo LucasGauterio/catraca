@@ -1,97 +1,93 @@
-import crypto from 'node:crypto';
+const CARD_NUMBER_REGEX = /^\d{16}$/;
 
-export type GatewayOutcome = 'confirmed' | 'declined';
+export type SimulatedPaymentOutcome = 'confirmed' | 'declined';
 
-export interface GatewayDecision {
-  outcome: GatewayOutcome;
+export interface SimulatedPaymentEvaluation {
+  outcome: SimulatedPaymentOutcome;
   delayMs: number;
 }
 
-const CARD_NUMBER_REGEX = /^\d{16}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MAX_EMAIL_LENGTH = 254;
-
-interface GatewayRule {
-  outcome: GatewayOutcome;
-  minMs: number;
-  maxMs: number;
+interface CardRule {
+  outcome: SimulatedPaymentOutcome;
+  minDelayMs: number;
+  maxDelayMs: number;
 }
 
-const FAST_DELAY_MIN_MS = 2000;
-const FAST_DELAY_MAX_MS = 5000;
-const SLOW_DELAY_MIN_MS = 30000;
-const SLOW_DELAY_MAX_MS = 40000;
+const FAST_MIN_DELAY_MS = 2000;
+const FAST_MAX_DELAY_MS = 5000;
+const SLOW_MIN_DELAY_MS = 30000;
+const SLOW_MAX_DELAY_MS = 40000;
 
-const GATEWAY_RULES: Record<string, GatewayRule> = {
-  '0001': { outcome: 'confirmed', minMs: FAST_DELAY_MIN_MS, maxMs: FAST_DELAY_MAX_MS },
-  '0002': { outcome: 'declined', minMs: FAST_DELAY_MIN_MS, maxMs: FAST_DELAY_MAX_MS },
-  '0003': { outcome: 'confirmed', minMs: SLOW_DELAY_MIN_MS, maxMs: SLOW_DELAY_MAX_MS },
-  '0004': { outcome: 'declined', minMs: SLOW_DELAY_MIN_MS, maxMs: SLOW_DELAY_MAX_MS },
+const CARD_SUFFIX_RULES: Readonly<Record<string, CardRule>> = {
+  '0001': {
+    outcome: 'confirmed',
+    minDelayMs: FAST_MIN_DELAY_MS,
+    maxDelayMs: FAST_MAX_DELAY_MS,
+  },
+  '0002': {
+    outcome: 'declined',
+    minDelayMs: FAST_MIN_DELAY_MS,
+    maxDelayMs: FAST_MAX_DELAY_MS,
+  },
+  '0003': {
+    outcome: 'confirmed',
+    minDelayMs: SLOW_MIN_DELAY_MS,
+    maxDelayMs: SLOW_MAX_DELAY_MS,
+  },
+  '0004': {
+    outcome: 'declined',
+    minDelayMs: SLOW_MIN_DELAY_MS,
+    maxDelayMs: SLOW_MAX_DELAY_MS,
+  },
 };
 
-const DEFAULT_GATEWAY_RULE: GatewayRule = {
+const DEFAULT_CARD_RULE: CardRule = {
   outcome: 'declined',
-  minMs: FAST_DELAY_MIN_MS,
-  maxMs: FAST_DELAY_MAX_MS,
+  minDelayMs: FAST_MIN_DELAY_MS,
+  maxDelayMs: FAST_MAX_DELAY_MS,
 };
 
-function randomIntInclusive(min: number, max: number): number {
-  return crypto.randomInt(min, max + 1);
-}
-
-/**
- * Resolves the effective gateway delay multiplier from an optional override or
- * the `GATEWAY_DELAY_SCALE` environment variable (defaulting to `1`).
- */
-export function getGatewayDelayScale(overrideScale?: number): number {
-  if (overrideScale !== undefined) {
-    return Number.isFinite(overrideScale) && overrideScale >= 0 ? overrideScale : 1;
-  }
-
-  const rawEnv = process.env.GATEWAY_DELAY_SCALE;
-  if (rawEnv === undefined || rawEnv.trim() === '') {
+function resolveDelayScale(delayScale?: number): number {
+  const candidate =
+    delayScale !== undefined ? delayScale : Number(process.env.GATEWAY_DELAY_SCALE ?? '1');
+  if (!Number.isFinite(candidate) || candidate < 0) {
     return 1;
   }
+  return candidate;
+}
 
-  const parsed = Number(rawEnv);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 1;
+function randomIntInclusive(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 /**
- * Validates that a credit card number contains strictly 16 numeric digits (`/^\d{16}$/`).
+ * Validates whether a card number consists of exactly 16 numeric digits (`/^\d{16}$/`).
  */
-export function validateCardNumber(cardNumber: string): boolean {
-  return typeof cardNumber === 'string' && CARD_NUMBER_REGEX.test(cardNumber);
+export function isValidCardNumber(cardNumber: string): boolean {
+  return CARD_NUMBER_REGEX.test(cardNumber);
 }
 
 /**
- * Validates that an email address conforms to a strict basic email format.
+ * Evaluates a 16-digit card number against the Catraca simulated payment gateway rules:
+ * - Ends with `0001`: `confirmed`, random delay in `[2000, 5000]` ms * scale
+ * - Ends with `0002`: `declined`, random delay in `[2000, 5000]` ms * scale
+ * - Ends with `0003`: `confirmed`, random delay in `[30000, 40000]` ms * scale
+ * - Ends with `0004`: `declined`, random delay in `[30000, 40000]` ms * scale
+ * - Any other 16-digit card: `declined`, random delay in `[2000, 5000]` ms * scale
  */
-export function validateEmail(email: string): boolean {
-  if (typeof email !== 'string') {
-    return false;
-  }
-  const trimmed = email.trim();
-  return trimmed.length > 0 && trimmed.length <= MAX_EMAIL_LENGTH && EMAIL_REGEX.test(trimmed);
-}
-
-/**
- * Determines the simulated payment gateway outcome and processing delay (in milliseconds)
- * based on the last 4 digits of the card number per R08 / brief.md:
- * - `0001`: confirmed, 2000-5000 ms
- * - `0002`: declined, 2000-5000 ms
- * - `0003`: confirmed, 30000-40000 ms
- * - `0004`: declined, 30000-40000 ms
- * - any other ending: declined, 2000-5000 ms
- */
-export function resolveGatewayDecision(
-  cardLast4: string,
+export function evaluateSimulatedCard(
+  cardNumber: string,
   delayScale?: number,
-): GatewayDecision {
-  const rule = GATEWAY_RULES[cardLast4] ?? DEFAULT_GATEWAY_RULE;
-  const baseDelayMs = randomIntInclusive(rule.minMs, rule.maxMs);
-  const scale = getGatewayDelayScale(delayScale);
-  const delayMs = Math.max(0, Math.round(baseDelayMs * scale));
+): SimulatedPaymentEvaluation {
+  if (!isValidCardNumber(cardNumber)) {
+    throw new Error('Invalid card number: expected exactly 16 numeric digits.');
+  }
+
+  const last4 = cardNumber.slice(-4);
+  const rule = CARD_SUFFIX_RULES[last4] ?? DEFAULT_CARD_RULE;
+  const scale = resolveDelayScale(delayScale);
+  const baseDelayMs = randomIntInclusive(rule.minDelayMs, rule.maxDelayMs);
+  const delayMs = Math.round(baseDelayMs * scale);
 
   return {
     outcome: rule.outcome,
