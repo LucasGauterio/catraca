@@ -30,3 +30,5 @@ test-results/
 # OS
 .DS_Store
 Thumbs.db
+
+.agents/plugins/agy-ensemble
