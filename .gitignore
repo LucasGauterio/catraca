@@ -1,6 +1,8 @@
 # agy-ensemble
 .ensemble/
-.agents/plugins/agy-ensemble
+.agents/
+docker-compose.security.yml
+graphify-out/
 
 # Node & Next.js
 node_modules/
