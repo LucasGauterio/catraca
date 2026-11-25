@@ -1,0 +1,40 @@
+{
+  "name": "catraca",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0 -p 3000",
+    "up": "node scripts/up.mjs",
+    "down": "node scripts/down.mjs",
+    "gates": "node scripts/gates.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src tests",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "bullmq": "^5.48.0",
+    "drizzle-orm": "^0.41.0",
+    "ioredis": "^5.6.1",
+    "next": "^15.2.4",
+    "pg": "^8.14.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsx": "^4.19.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.23.0",
+    "@tailwindcss/postcss": "^4.0.17",
+    "@types/node": "^22.14.0",
+    "@types/pg": "^8.11.11",
+    "@types/react": "^19.0.12",
+    "@types/react-dom": "^19.0.4",
+    "eslint": "^9.23.0",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.0.17",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.28.0",
+    "vitest": "^3.1.1"
+  }
+}
