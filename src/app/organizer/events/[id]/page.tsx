@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { EventManageClient } from '@/components/organizer/EventManageClient';
 import { getSessionUser } from '@/lib/auth';
+import { getEventDashboard } from '@/lib/events/operations';
 import { getOrganizerEventById } from '@/lib/events/service';
 
 export const dynamic = 'force-dynamic';
@@ -49,9 +50,12 @@ export default async function OrganizerEventPage({
   }
 
   const { id } = await params;
-  const event = await getOrganizerEventById(user.id, id);
+  const [event, dashboard] = await Promise.all([
+    getOrganizerEventById(user.id, id),
+    getEventDashboard(user.id, id),
+  ]);
 
-  if (!event) {
+  if (!event || !dashboard) {
     return (
       <section className="mx-auto max-w-xl rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
         <h1 className="text-xl font-bold text-slate-900">Evento não encontrado</h1>
@@ -70,5 +74,5 @@ export default async function OrganizerEventPage({
     );
   }
 
-  return <EventManageClient initialEvent={event} />;
+  return <EventManageClient initialEvent={event} initialDashboard={dashboard} />;
 }
