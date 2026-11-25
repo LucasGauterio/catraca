@@ -1,0 +1,30 @@
+# agy-ensemble
+.ensemble/
+.agents/plugins/agy-ensemble
+
+# Node & Next.js
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment & local secrets
+.env
+.env.local
+.env.*.local
+
+# Logs & test artifacts
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+playwright-report/
+test-results/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

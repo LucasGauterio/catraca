@@ -1,0 +1,85 @@
+{
+  "project": "catraca",
+  "repository": "https://github.com/LucasGauterio/catraca",
+  "updatedAt": "2026-11-25T10:15:00-03:00",
+  "parallelWaves": [
+    {
+      "wave": 2,
+      "features": ["F02", "F03"],
+      "prs": []
+    },
+    {
+      "wave": 3,
+      "features": ["F04", "F05"],
+      "prs": []
+    }
+  ],
+  "features": [
+    {
+      "id": "F01",
+      "name": "Plataforma, Harness, Banco de Dados, Seed e Autenticação",
+      "wave": 1,
+      "status": "pending",
+      "spec": "docs/features/F01/spec.md",
+      "plan": "docs/features/F01/plan.md",
+      "contract": "docs/features/F01/contract.md",
+      "latestReport": null,
+      "prUrl": null
+    },
+    {
+      "id": "F02",
+      "name": "Gestão de Eventos e Área do Organizador",
+      "wave": 2,
+      "status": "pending",
+      "spec": "docs/features/F02/spec.md",
+      "plan": "docs/features/F02/plan.md",
+      "contract": "docs/features/F02/contract.md",
+      "latestReport": null,
+      "prUrl": null
+    },
+    {
+      "id": "F03",
+      "name": "Motor de Reservas Concorrentes e Gateway Simulado Assíncrono",
+      "wave": 2,
+      "status": "pending",
+      "spec": "docs/features/F03/spec.md",
+      "plan": "docs/features/F03/plan.md",
+      "contract": "docs/features/F03/contract.md",
+      "latestReport": null,
+      "prUrl": null
+    },
+    {
+      "id": "F04",
+      "name": "Vitrine Pública e Área do Participante (Meus Ingressos)",
+      "wave": 3,
+      "status": "pending",
+      "spec": "docs/features/F04/spec.md",
+      "plan": "docs/features/F04/plan.md",
+      "contract": "docs/features/F04/contract.md",
+      "latestReport": null,
+      "prUrl": null
+    },
+    {
+      "id": "F05",
+      "name": "API de Parceiros (Contrato Fixo)",
+      "wave": 3,
+      "status": "pending",
+      "spec": "docs/features/F05/spec.md",
+      "plan": "docs/features/F05/plan.md",
+      "contract": "docs/features/F05/contract.md",
+      "latestReport": null,
+      "prUrl": null
+    },
+    {
+      "id": "F06",
+      "name": "Check-in, Painel de Gestão e Cancelamento Irreversível",
+      "wave": 4,
+      "status": "pending",
+      "spec": "docs/features/F06/spec.md",
+      "plan": "docs/features/F06/plan.md",
+      "contract": "docs/features/F06/contract.md",
+      "latestReport": null,
+      "prUrl": null
+    }
+  ]
+}
