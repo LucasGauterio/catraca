@@ -1,13 +1,33 @@
 import Link from 'next/link';
+import {
+  StorefrontClient,
+  type StorefrontEventItem,
+} from '@/components/storefront/StorefrontClient';
 import { getSessionUser } from '@/lib/auth';
+import { formatBrlFromCents, formatEventDateTimePtBr } from '@/lib/tickets/labels';
+import { listPublishedEventsWithSeats } from '@/lib/tickets/queries';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Public storefront landing page shell (events catalog will be populated in F04).
+ * Public storefront page listing exclusively published events with live seat counts (R02, R07).
  */
 export default async function HomePage(): Promise<React.ReactElement> {
-  const user = await getSessionUser();
+  const [user, publishedEvents] = await Promise.all([
+    getSessionUser(),
+    listPublishedEventsWithSeats(),
+  ]);
+
+  const storefrontEvents: StorefrontEventItem[] = publishedEvents.map((event) => ({
+    id: event.id,
+    name: event.name,
+    formattedStartsAt: formatEventDateTimePtBr(event.startsAt),
+    location: event.location,
+    priceCents: event.priceCents,
+    formattedPrice: formatBrlFromCents(event.priceCents),
+    capacity: event.capacity,
+    availableSeats: event.availableSeats,
+  }));
 
   return (
     <section className="space-y-6">
@@ -36,6 +56,14 @@ export default async function HomePage(): Promise<React.ReactElement> {
               </Link>
             </>
           )}
+          {user && (
+            <Link
+              href="/my-tickets"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              Meus ingressos
+            </Link>
+          )}
           {user?.role === 'organizer' && (
             <Link
               href="/organizer"
@@ -47,9 +75,7 @@ export default async function HomePage(): Promise<React.ReactElement> {
         </div>
       </div>
 
-      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
-        Nenhum evento publicado disponível no momento.
-      </div>
+      <StorefrontClient events={storefrontEvents} isAuthenticated={Boolean(user)} />
     </section>
   );
 }

@@ -1,67 +1,50 @@
-import { desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
-import { getTicketStatusLabel } from '@/components/storefront/formatters';
-import { db } from '@/db';
-import { events, tickets } from '@/db/schema';
-import { AuthError, requireUser } from '@/lib/auth';
+import { getSessionUser } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { listUserTickets } from '@/lib/tickets/my-tickets';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Lists all tickets purchased by the currently authenticated user, ordered by newest first (R09).
+ * Returns all tickets purchased by the currently authenticated user,
+ * including event details and PT-BR status labels (R09).
  */
 export async function GET(): Promise<NextResponse> {
-  try {
-    const user = await requireUser();
-
-    const rows = await db
-      .select({
-        ticketId: tickets.id,
-        code: tickets.code,
-        status: tickets.status,
-        checkedIn: tickets.checkedIn,
-        priceCents: tickets.priceCents,
-        createdAt: tickets.createdAt,
-        eventId: events.id,
-        eventName: events.name,
-        eventStartsAt: events.startsAt,
-        eventLocation: events.location,
-        eventStatus: events.status,
-      })
-      .from(tickets)
-      .innerJoin(events, eq(tickets.eventId, events.id))
-      .where(eq(tickets.userId, user.id))
-      .orderBy(desc(tickets.createdAt));
-
-    const payload = rows.map((row) => ({
-      ticketId: row.ticketId,
-      code: row.code,
-      status: row.status,
-      statusLabel: getTicketStatusLabel(row.status),
-      checkedIn: row.checkedIn,
-      priceCents: row.priceCents,
-      createdAt: row.createdAt.toISOString(),
-      event: {
-        id: row.eventId,
-        name: row.eventName,
-        startsAt: row.eventStartsAt.toISOString(),
-        location: row.eventLocation,
-        status: row.eventStatus,
-      },
-    }));
-
-    return NextResponse.json({ tickets: payload }, { status: 200 });
-  } catch (error: unknown) {
-    if (error instanceof AuthError) {
-      return NextResponse.json(
-        { error: error.code, message: error.message },
-        { status: error.statusCode },
-      );
-    }
-    logger.error('participant_my_tickets_failed', { error });
+  const user = await getSessionUser();
+  if (!user) {
     return NextResponse.json(
-      { error: 'internal_error', message: 'Erro ao consultar seus ingressos.' },
+      { error: 'unauthorized', message: 'Autenticação obrigatória' },
+      { status: 401 },
+    );
+  }
+
+  try {
+    const userTickets = await listUserTickets(user.id);
+    return NextResponse.json(
+      {
+        tickets: userTickets.map((ticket) => ({
+          ticketId: ticket.ticketId,
+          code: ticket.code,
+          eventId: ticket.eventId,
+          eventName: ticket.eventName,
+          eventStartsAt: ticket.eventStartsAt.toISOString(),
+          eventLocation: ticket.eventLocation,
+          status: ticket.status,
+          statusLabel: ticket.statusLabel,
+          checkedIn: ticket.checkedIn,
+          priceCents: ticket.priceCents,
+          createdAt: ticket.createdAt.toISOString(),
+        })),
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    logger.error('my_tickets_query_failed', {
+      userId: user.id,
+      error,
+    });
+    return NextResponse.json(
+      { error: 'internal_error', message: 'Erro ao carregar seus ingressos' },
       { status: 500 },
     );
   }
